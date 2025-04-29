@@ -63,24 +63,58 @@ tabs = st.tabs([
 ])
 
 # National Trends
+# National Trends
 with tabs[0]:
     st.subheader("📈 National Average Top-box % by Year")
+    national_results_df['Year'] = national_results_df['Year'].astype(int)  # Ensure no decimals
     national_avg = national_results_df.groupby('Year')["Top-box Percentage"].mean().reset_index()
     st.line_chart(national_avg.set_index("Year"))
+
 
 # Most Improved Areas
 with tabs[1]:
     st.subheader("📊 Most Improved Questions")
-    q_year = state_results_df.groupby(['Question', 'Year'])['Top-box Percentage'].mean().reset_index()
-    pivot = q_year.pivot(index='Question', columns='Year', values='Top-box Percentage')
+
+    state_results_df['Year'] = state_results_df['Year'].astype(int)  # Ensure no decimals
+
+    # Group by Measure, Question, and Year
+    q_year = state_results_df.groupby(['Measure', 'Question', 'Year'])['Top-box Percentage'].mean().reset_index()
+    pivot = q_year.pivot(index=['Measure', 'Question'], columns='Year', values='Top-box Percentage')
+
     if pivot.shape[1] >= 2:
         pivot['Improvement'] = pivot[pivot.columns[-1]] - pivot[pivot.columns[0]]
         improved = pivot.sort_values('Improvement', ascending=False).reset_index()
-        top_improved = improved[['Question', 'Improvement']].head(10)
+        top_improved = improved[['Measure', 'Question', 'Improvement']].head(10)
+
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(data=top_improved, y='Question', x='Improvement', hue='Question', legend=False, palette='viridis', ax=ax)
+        sns.barplot(data=top_improved, y='Question', x='Improvement', hue='Measure', legend=False, palette='viridis', ax=ax)
         st.pyplot(fig)
+
         st.dataframe(top_improved)
+
+        # 🧠 AI-style Recommendations
+        st.markdown("### 💡 Recommendations for Continued Improvement")
+        for _, row in top_improved.iterrows():
+            measure = row['Measure'].lower()
+            question = row['Question'].lower()
+
+            if 'nurse' in question:
+                rec = "Reinforce nurse communication protocols and bedside availability."
+            elif 'doctor' in question:
+                rec = "Sustain physician-patient communication clarity and trust-building."
+            elif 'clean' in question or 'quiet' in question:
+                rec = "Maintain hospital cleanliness and minimize nighttime disruptions."
+            elif 'pain' in question:
+                rec = "Continue effective pain management routines and check-ins."
+            elif 'discharge' in question:
+                rec = "Standardize discharge instruction practices across departments."
+            elif 'call' in question or 'help' in question:
+                rec = "Ensure timely response systems and increase staff awareness."
+
+            else:
+                rec = f"Maintain excellence in: {row['Measure']}"
+
+            st.markdown(f"- **{row['Question']}** → {rec}")
 
 # Score Disparities
 with tabs[2]:
