@@ -256,39 +256,55 @@ with tabs[7]:
             st.markdown(f"- **{row['Measure']}**: Excellent performance at {row['State Score']:.1f}% vs national {row['Top-box Percentage']:.1f}%.")
 
     st.info("Use this analysis to prioritize quality improvement efforts by focusing on underperforming areas first.")
-# Patient Experience Heatmap
 with tabs[8]:
     st.subheader("🗺️ Patient Experience Score by State")
 
     state_results_df['Year'] = state_results_df['Year'].astype(int)
     latest_year = state_results_df['Year'].max()
 
+    # Measure selector
+    available_measures = sorted(state_results_df['Measure'].dropna().unique())
+    selected_measure = st.selectbox("Select Measure", available_measures)
+
+    # Filter by selected measure and year
+    filtered_df = state_results_df[
+        (state_results_df['Year'] == latest_year) &
+        (state_results_df['Measure'] == selected_measure)
+    ]
+
+    # Compute national average for KPI
+    national_avg = filtered_df['Top-box Percentage'].mean()
+
+    # Group by 2-letter state code
     state_avg = (
-        state_results_df[state_results_df['Year'] == latest_year]
-        .groupby('State Name')['Top-box Percentage']
+        filtered_df.groupby('State')['Top-box Percentage']
         .mean()
         .reset_index()
     )
+
+    # National benchmark
+    st.metric(label=f"National Avg – {selected_measure} ({latest_year})", value=f"{national_avg:.1f}%")
 
     try:
         import plotly.express as px
 
         fig = px.choropleth(
             state_avg,
-            locations="State Name",
+            locations="State",  # 2-letter codes
             locationmode="USA-states",
             scope="usa",
             color="Top-box Percentage",
             color_continuous_scale="RdYlGn",
-            title=f"Top-box % by State ({latest_year})",
+            title=f"{selected_measure} – Top-box % by State ({latest_year})",
             labels={"Top-box Percentage": "Top-box %"},
         )
-        fig.update_layout(margin={"r": 0, "t": 30, "l": 0, "b": 0})
+        fig.update_layout(margin={"r": 0, "t": 40, "l": 0, "b": 0})
         st.plotly_chart(fig, use_container_width=True)
 
     except Exception as e:
-        st.warning("Plotly is not available or an error occurred.")
+        st.warning("Plotly failed to render the heatmap.")
         st.error(e)
+
 
 # Benchmarking Dashboard
 with tabs[9]:
