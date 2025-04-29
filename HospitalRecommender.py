@@ -118,22 +118,38 @@ with tabs[2]:
 # Regional Differences
 with tabs[3]:
     st.subheader("🗺️ Regional Average Scores")
+
+    # Ensure Year is integer to match slider
+    state_results_df['Year'] = state_results_df['Year'].astype(int)
     reg_avg = state_results_df.groupby(['Region', 'Year'])['Top-box Percentage'].mean().reset_index()
+    reg_avg['Year'] = reg_avg['Year'].astype(int)  # Ensure Year is int
+
     year = st.slider("Select Year", int(reg_avg['Year'].min()), int(reg_avg['Year'].max()), int(reg_avg['Year'].max()), key='regional_slider')
     chart_df = reg_avg[reg_avg['Year'] == year]
+
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(data=chart_df, x='Top-box Percentage', y='Region', hue='Region', legend=False, palette='crest', ax=ax)
     st.pyplot(fig)
 
+
 # Response Rate Insights
 with tabs[4]:
     st.subheader("📬 National Response Rate Over Time")
+
+    # Ensure Year is integer
+    responses_df['Year'] = responses_df['Year'].astype(int)
+
+    # Group and visualize
     rate_trend = responses_df.groupby('Year')["Response Rate (%)"].mean().reset_index()
     st.line_chart(rate_trend.set_index("Year"))
+
+    # Correlation analysis
     joined = pd.merge(state_results_df, responses_df, on=['Release Period', 'State'], how='left')
     corr_df = joined.dropna(subset=['Top-box Percentage', 'Response Rate (%)'])
     corr_val = corr_df['Top-box Percentage'].corr(corr_df['Response Rate (%)'])
+
     st.metric(label="Correlation (Top-box % vs Response Rate)", value=round(corr_val, 2))
+
 
 # Opportunity Matrix
 with tabs[5]:
@@ -171,6 +187,9 @@ with tabs[7]:
     st.subheader("🏛️ Compare State vs National Scores")
     selected_state = st.selectbox("Select a State", sorted(state_results_df['State Name'].dropna().unique()))
     state_data = state_results_df[state_results_df['State Name'] == selected_state]
+    # Ensure Year is integer in all relevant DataFrames
+    state_results_df['Year'] = state_results_df['Year'].astype(int)
+    national_results_df['Year'] = national_results_df['Year'].astype(int)
     natl_avg = national_results_df.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
     state_avg = state_data.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index(name='State Score')
     merged = pd.merge(state_avg, natl_avg, on=['Measure', 'Year'])
