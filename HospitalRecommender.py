@@ -259,43 +259,47 @@ with tabs[7]:
 with tabs[8]:
     st.subheader("🗺️ Patient Experience Score by State")
 
+    # Clean and prepare Year column
+    state_results_df['Year'] = pd.to_numeric(state_results_df['Year'], errors='coerce').astype('Int64')
+    state_results_df.dropna(subset=['Year'], inplace=True)
     state_results_df['Year'] = state_results_df['Year'].astype(int)
-    latest_year = state_results_df['Year'].max()
 
-    # Measure selector
+    # Year slider
+    available_years = sorted(state_results_df['Year'].unique(), reverse=True)
+    selected_year = st.slider("Select Year", min_value=min(available_years), max_value=max(available_years),
+                              value=max(available_years), step=1, key="heatmap_year")
+
+    # Measure selector with key
     available_measures = sorted(state_results_df['Measure'].dropna().unique())
-    selected_measure = st.selectbox("Select Measure", available_measures)
+    selected_measure = st.selectbox("Select Measure", available_measures, key="heatmap_measure")
 
-    # Filter by selected measure and year
+    # Filter data
     filtered_df = state_results_df[
-        (state_results_df['Year'] == latest_year) &
+        (state_results_df['Year'] == selected_year) &
         (state_results_df['Measure'] == selected_measure)
     ]
 
-    # Compute national average for KPI
+    # Compute national average
     national_avg = filtered_df['Top-box Percentage'].mean()
 
-    # Group by 2-letter state code
+    # State-level scores
     state_avg = (
         filtered_df.groupby('State')['Top-box Percentage']
         .mean()
         .reset_index()
     )
 
-    # National benchmark
-    st.metric(label=f"National Avg – {selected_measure} ({latest_year})", value=f"{national_avg:.1f}%")
+    st.metric(label=f"National Avg – {selected_measure} ({selected_year})", value=f"{national_avg:.1f}%")
 
     try:
-        import plotly.express as px
-
         fig = px.choropleth(
             state_avg,
-            locations="State",  # 2-letter codes
+            locations="State",
             locationmode="USA-states",
             scope="usa",
             color="Top-box Percentage",
             color_continuous_scale="RdYlGn",
-            title=f"{selected_measure} – Top-box % by State ({latest_year})",
+            title=f"{selected_measure} – Top-box % by State ({selected_year})",
             labels={"Top-box Percentage": "Top-box %"},
         )
         fig.update_layout(margin={"r": 0, "t": 40, "l": 0, "b": 0})
@@ -304,6 +308,88 @@ with tabs[8]:
     except Exception as e:
         st.warning("Plotly failed to render the heatmap.")
         st.error(e)
+
+    # 📊 Comparison Table
+    st.markdown("### 📋 State Scores vs National Average")
+    state_avg['Comparison'] = state_avg['Top-box Percentage'].apply(
+        lambda x: "🔼 Above Avg" if x > national_avg + 0.5 else ("🔽 Below Avg" if x < national_avg - 0.5 else "⚖️ Close to Avg")
+    )
+    state_table = state_avg.sort_values('Top-box Percentage', ascending=False).reset_index(drop=True)
+    st.dataframe(state_table.rename(columns={
+        'State': 'State Code',
+        'Top-box Percentage': 'Top-box %',
+        'Comparison': 'Performance Tag'
+    }))
+
+
+   with tabs[8]:
+    st.subheader("🗺️ Patient Experience Score by State")
+
+    state_results_df['Year'] = pd.to_numeric(state_results_df['Year'], errors='coerce').astype('Int64')
+    state_results_df.dropna(subset=['Year'], inplace=True)
+    state_results_df['Year'] = state_results_df['Year'].astype(int)
+
+    # Year slider
+    available_years = sorted(state_results_df['Year'].unique(), reverse=True)
+    selected_year = st.slider("Select Year", min_value=min(available_years), max_value=max(available_years),
+                              value=max(available_years), step=1, key="heatmap_year")
+
+    # Measure selector with unique key
+    available_measures = sorted(state_results_df['Measure'].dropna().unique())
+    selected_measure = st.selectbox("Select Measure", available_measures, key="heatmap_measure")
+
+    # Filter data by selected measure and year
+    filtered_df = state_results_df[
+        (state_results_df['Year'] == selected_year) &
+        (state_results_df['Measure'] == selected_measure)
+    ]
+
+    # Compute national average KPI
+    national_avg = filtered_df['Top-box Percentage'].mean()
+
+    # State-level values
+    state_avg = (
+        filtered_df.groupby('State')['Top-box Percentage']
+        .mean()
+        .reset_index()
+    )
+
+    st.metric(label=f"National Avg – {selected_measure} ({selected_year})", value=f"{national_avg:.1f}%")
+
+    try:
+        import plotly.express as px
+
+        fig = px.choropleth(
+            state_avg,
+            locations="State",  # Must be 2-letter codes
+            locationmode="USA-states",
+            scope="usa",
+            color="Top-box Percentage",
+            color_continuous_scale="RdYlGn",
+            title=f"{selected_measure} – Top-box % by State ({selected_year})",
+            labels={"Top-box Percentage": "Top-box %"},
+        )
+        fig.update_layout(margin={"r": 0, "t": 40, "l": 0, "b": 0})
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        st.warning("Plotly failed to render the heatmap.")
+        st.error(e)
+        # 📊 Comparison Table
+        st.markdown("### 📋 State Scores vs National Average")
+
+        # Tag states based on comparison
+        state_avg['Comparison'] = state_avg['Top-box Percentage'].apply(
+            lambda x: "🔼 Above Avg" if x > national_avg + 0.5 else ("🔽 Below Avg" if x < national_avg - 0.5 else "⚖️ Close to Avg")
+        )
+
+        state_table = state_avg.sort_values('Top-box Percentage', ascending=False).reset_index(drop=True)
+        st.dataframe(state_table.rename(columns={
+            'State': 'State Code',
+            'Top-box Percentage': 'Top-box %',
+            'Comparison': 'Performance Tag'
+        }))
+
 
 
 # Benchmarking Dashboard
