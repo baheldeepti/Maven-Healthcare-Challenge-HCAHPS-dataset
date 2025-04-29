@@ -132,23 +132,49 @@ with tabs[3]:
     st.pyplot(fig)
 
 
+
 # Response Rate Insights
 with tabs[4]:
-    st.subheader("📬 National Response Rate Over Time")
+    st.subheader("📬 National & State Response Rate Trends Over Time")
 
     # Ensure Year is integer
+    responses_df['Year'] = pd.to_numeric(responses_df['Year'], errors='coerce').astype('Int64')
+    responses_df.dropna(subset=['Year'], inplace=True)
     responses_df['Year'] = responses_df['Year'].astype(int)
 
-    # Group and visualize
-    rate_trend = responses_df.groupby('Year')["Response Rate (%)"].mean().reset_index()
-    st.line_chart(rate_trend.set_index("Year"))
+    # National average response rate trend
+    national_trend = responses_df.groupby('Year')["Response Rate (%)"].mean().reset_index()
+    national_trend['Region/State'] = 'National'
 
-    # Correlation analysis
+    # Select states for comparison
+    selected_states = st.multiselect(
+        "Select states to compare with national trend:",
+        sorted(responses_df['State Name'].dropna().unique()),
+        default=["California", "Texas"]
+    )
+
+    # State-level response rate trend
+    state_trends = responses_df[responses_df['State Name'].isin(selected_states)]
+    state_trends = state_trends.groupby(['Year', 'State Name'])['Response Rate (%)'].mean().reset_index()
+    state_trends.rename(columns={'State Name': 'Region/State'}, inplace=True)
+
+    # Combine national + state data
+    combined_trends = pd.concat([national_trend, state_trends], ignore_index=True)
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.lineplot(data=combined_trends, x='Year', y='Response Rate (%)', hue='Region/State', marker='o', ax=ax)
+    ax.set_title("Response Rate Trends: National vs Selected States")
+    ax.grid(True)
+    st.pyplot(fig)
+
+    # Correlation between Top-box % and Response Rate
     joined = pd.merge(state_results_df, responses_df, on=['Release Period', 'State'], how='left')
     corr_df = joined.dropna(subset=['Top-box Percentage', 'Response Rate (%)'])
     corr_val = corr_df['Top-box Percentage'].corr(corr_df['Response Rate (%)'])
 
     st.metric(label="Correlation (Top-box % vs Response Rate)", value=round(corr_val, 2))
+
 
 
 # Opportunity Matrix
