@@ -59,7 +59,10 @@ tabs = st.tabs([
     "Response Rate Insights",
     "Opportunity Matrix",
     "AI Recommendations",
-    "State-Level Comparison"
+    "State-Level Comparison",
+    "Patient Experience Heatmap",
+    "Benchmarking Dashboard",
+    "Anomaly Alerts"
 ])
 
 # National Trends
@@ -253,3 +256,99 @@ with tabs[7]:
             st.markdown(f"- **{row['Measure']}**: Excellent performance at {row['State Score']:.1f}% vs national {row['Top-box Percentage']:.1f}%.")
 
     st.info("Use this analysis to prioritize quality improvement efforts by focusing on underperforming areas first.")
+# Patient Experience Heatmap
+with tabs[8]:
+    st.subheader("🗺️ Patient Experience Score by State")
+
+    # Ensure year is integer
+    state_results_df['Year'] = state_results_df['Year'].astype(int)
+    latest_year = state_results_df['Year'].max()
+
+    state_avg = (
+        state_results_df[state_results_df['Year'] == latest_year]
+        .groupby('State Name')['Top-box Percentage']
+        .mean()
+        .reset_index()
+    )
+
+    try:
+        import plotly.express as px
+
+        fig = px.choropleth(
+            state_avg,
+            locations="State Name",
+            locationmode="USA-states",
+            scope="usa",
+            color="Top-box Percentage",
+            color_continuous_scale="RdYlGn",
+            title=f"Top-box % by State ({latest_year})",
+            labels={"Top-box Percentage": "Top-box %"},
+        )
+        fig.update_layout(margin={"r": 0, "t": 30, "l": 0, "b": 0})
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        st.warning("Plotly is not available or an error occurred.")
+        st.error(e)
+# Benchmarking Dashboard
+with tabs[9]:
+    st.subheader("🏅 State Benchmarking by Measure")
+
+    # User selection
+    selected_year = st.selectbox("Select Year", sorted(state_results_df['Year'].unique(), reverse=True))
+    selected_measure = st.selectbox("Select Measure", sorted(state_results_df['Measure'].dropna().unique()))
+
+    bench_df = state_results_df[
+        (state_results_df['Year'] == selected_year) &
+        (state_results_df['Measure'] == selected_measure)
+    ].groupby('State Name')['Top-box Percentage'].mean().reset_index()
+
+    bench_df['Rank'] = bench_df['Top-box Percentage'].rank(ascending=False)
+    bench_df = bench_df.sort_values('Top-box Percentage', ascending=False)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.barplot(data=bench_df, y='State Name', x='Top-box Percentage', palette='coolwarm', ax=ax)
+    ax.set_title(f"Benchmarking: {selected_measure} ({selected_year})")
+    st.pyplot(fig)
+
+    st.dataframe(bench_df.reset_index(drop=True))
+# Anomaly Alerts
+with tabs[10]:
+    st.subheader("🚨 Anomaly Detection: Sudden Score Drops")
+
+    # Prepare data
+    anomaly_df = state_results_df.copy()
+    anomaly_df = anomaly_df.dropna(subset=['Top-box Percentage', 'Measure', 'State Name'])
+    anomaly_df['Year'] = anomaly_df['Year'].astype(int)
+
+    # Calculate YoY difference
+    anomaly_df = anomaly_df.groupby(['State Name', 'Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
+    anomaly_df.sort_values(['State Name', 'Measure', 'Year'], inplace=True)
+    anomaly_df['YoY Change'] = anomaly_df.groupby(['State Name', 'Measure'])['Top-box Percentage'].diff()
+
+    # Calculate Z-score for YoY change
+    anomaly_df['Z-Score'] = anomaly_df.groupby('Measure')['YoY Change'].transform(lambda x: (x - x.mean()) / x.std())
+
+    # Flag anomalies (z < -2)
+    flagged = anomaly_df[(anomaly_df['Z-Score'] < -2) & (anomaly_df['YoY Change'] < 0)]
+
+    if flagged.empty:
+        st.success("No significant anomalies detected based on year-over-year drops.")
+    else:
+        st.warning(f"{len(flagged)} anomalies found with Z-score < -2 (significant drops)")
+
+        # Show table
+        st.dataframe(flagged[['State Name', 'Measure', 'Year', 'Top-box Percentage', 'YoY Change', 'Z-Score']])
+
+        # Plot: Anomaly Heatmap
+        st.markdown("### 📉 Heatmap of Anomalous Drops")
+        pivot_alert = flagged.pivot(index='State Name', columns='Measure', values='YoY Change')
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.heatmap(pivot_alert, cmap="coolwarm", center=0, annot=True, fmt=".1f", linewidths=0.5, ax=ax)
+        st.pyplot(fig)
+
+        # Sample triggers
+        st.markdown("### 🔍 Potential Triggers or Considerations")
+        st.markdown("- Staffing shortages or policy changes")
+        st.markdown("- Service disruption or hospital consolidation")
+        st.markdown("- Low response rate or survey fatigue")
