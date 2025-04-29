@@ -45,7 +45,6 @@ national_results_df = pd.merge(national_results_df, merged_measures_questions[['
 state_results_df = pd.merge(state_results_df, states_df[['State', 'State Name', 'Region']], on='State', how='left')
 responses_df = pd.merge(responses_df, states_df[['State', 'State Name', 'Region']], on='State', how='left')
 
-# Ensure required columns exist
 state_results_df.dropna(subset=['Question', 'Top-box Percentage', 'Measure'], inplace=True)
 national_results_df.dropna(subset=['Question', 'Top-box Percentage', 'Measure'], inplace=True)
 
@@ -97,7 +96,7 @@ with tabs[2]:
 with tabs[3]:
     st.subheader("🗺️ Regional Average Scores")
     reg_avg = state_results_df.groupby(['Region', 'Year'])['Top-box Percentage'].mean().reset_index()
-    year = st.slider("Select Year", int(reg_avg['Year'].min()), int(reg_avg['Year'].max()), int(reg_avg['Year'].max()))
+    year = st.slider("Select Year", int(reg_avg['Year'].min()), int(reg_avg['Year'].max()), int(reg_avg['Year'].max()), key='regional_slider')
     chart_df = reg_avg[reg_avg['Year'] == year]
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(data=chart_df, x='Top-box Percentage', y='Region', hue='Region', legend=False, palette='crest', ax=ax)
@@ -152,7 +151,7 @@ with tabs[7]:
     natl_avg = national_results_df.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
     state_avg = state_data.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index(name='State Score')
     merged = pd.merge(state_avg, natl_avg, on=['Measure', 'Year'])
-    compare_year = st.slider("Select Year", int(merged['Year'].min()), int(merged['Year'].max()), int(merged['Year'].max()))
+    compare_year = st.slider("Select Year", int(merged['Year'].min()), int(merged['Year'].max()), int(merged['Year'].max()), key='state_comparison_slider')
     year_df = merged[merged['Year'] == compare_year].sort_values('State Score')
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.scatterplot(data=year_df, x='Top-box Percentage', y='State Score', hue='Measure', s=80, ax=ax)
