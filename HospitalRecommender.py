@@ -151,12 +151,37 @@ with tabs[7]:
     natl_avg = national_results_df.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
     state_avg = state_data.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index(name='State Score')
     merged = pd.merge(state_avg, natl_avg, on=['Measure', 'Year'])
+    
     compare_year = st.slider("Select Year", int(merged['Year'].min()), int(merged['Year'].max()), int(merged['Year'].max()), key='state_comparison_slider')
     year_df = merged[merged['Year'] == compare_year].sort_values('State Score')
+    
+    # Scatter plot comparison
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.scatterplot(data=year_df, x='Top-box Percentage', y='State Score', hue='Measure', s=80, ax=ax)
     ax.plot([0, 100], [0, 100], linestyle='--', color='gray')
     ax.set_xlabel("National Average")
     ax.set_ylabel(f"{selected_state} Average")
     st.pyplot(fig)
+    
     st.dataframe(year_df[['Measure', 'State Score', 'Top-box Percentage']])
+    
+    # 💬 Recommendations based on gaps
+    st.markdown("### 🔍 Recommendations Based on Gaps")
+
+    year_df['Delta'] = year_df['State Score'] - year_df['Top-box Percentage']
+    underperforming = year_df[year_df['Delta'] < -2].sort_values('Delta')
+    outperforming = year_df[year_df['Delta'] > 2].sort_values('Delta', ascending=False)
+
+    if not underperforming.empty:
+        st.markdown("**⚠️ Areas where the state underperforms the national average:**")
+        for _, row in underperforming.iterrows():
+            st.markdown(f"- **{row['Measure']}**: Improve from {row['State Score']:.1f}% to match national average of {row['Top-box Percentage']:.1f}%.")
+    else:
+        st.success("This state is performing close to or above national averages across all measures.")
+
+    if not outperforming.empty:
+        st.markdown("**✅ Measures where the state outperforms the national average:**")
+        for _, row in outperforming.iterrows():
+            st.markdown(f"- **{row['Measure']}**: Excellent performance at {row['State Score']:.1f}% vs national {row['Top-box Percentage']:.1f}%.")
+
+    st.info("Use this analysis to prioritize quality improvement efforts by focusing on underperforming areas first.")
