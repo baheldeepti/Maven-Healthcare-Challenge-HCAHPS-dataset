@@ -145,42 +145,28 @@ with tabs[0]:
 with tabs[1]:
     st.subheader("📊 Most Improved Patient Experience (Composite Score)")
 
-    # Calculate yearly Top and Bottom box % by question
-    q_year = state_results_df.groupby(['Measure', 'Question', 'Year'])[
-        ['Top-box Percentage', 'Bottom-box Percentage']
-    ].mean().reset_index()
-
-    # Calculate Composite Score = Top - Bottom
+    q_year = state_results_df.groupby(['Measure', 'Question', 'Year'])[['Top-box Percentage', 'Bottom-box Percentage']].mean().reset_index()
     q_year['Composite Score'] = q_year['Top-box Percentage'] - q_year['Bottom-box Percentage']
-
-    # Pivot to compare first vs latest year
     pivot = q_year.pivot(index=['Measure', 'Question'], columns='Year', values='Composite Score')
 
     if pivot.shape[1] >= 2:
         pivot['Improvement'] = pivot[pivot.columns[-1]] - pivot[pivot.columns[0]]
         improved = pivot.reset_index()
 
-        # Filter positive composite score improvement
         positive_improvement = improved[improved['Improvement'] > 0].sort_values('Improvement', ascending=False)
         weakest = improved.sort_values('Improvement').head(5)[['Measure', 'Question', 'Improvement']]
 
         if not positive_improvement.empty:
             top_improved = positive_improvement[['Measure', 'Question', 'Improvement']].head(10)
-
-            # Plot top improved Composite Scores
             fig, ax = plt.subplots(figsize=(10, 6))
             sns.barplot(data=top_improved, y='Question', x='Improvement', hue='Measure', palette='crest', ax=ax, dodge=False)
             ax.set_title("Top 10 Questions by Composite Sentiment Improvement (Top-box % - Bottom-box %)")
             st.pyplot(fig)
-
             st.markdown("### 📈 Top Improved Composite Score Questions")
             st.dataframe(top_improved)
-
             st.markdown("### ⚠️ Weakest Performing Questions (Composite Score Decline)")
             st.dataframe(weakest)
 
-            # Optional: show Bottom-box trend over years
-            st.subheader("📉 Bottom-box % Trend Over Time (Average by Year)")
             bottom_trend = state_results_df.groupby('Year')['Bottom-box Percentage'].mean().reset_index()
             fig2, ax2 = plt.subplots(figsize=(8, 4))
             sns.lineplot(data=bottom_trend, x='Year', y='Bottom-box Percentage', marker="o", ax=ax2)
@@ -190,8 +176,8 @@ with tabs[1]:
         else:
             st.warning("No positive composite score improvements found. Showing insights based on weak areas.")
 
-        # AI Summary
         if st.checkbox("📄 Generate AI Summary & Recommendations (Composite + Bottom-box)"):
+            trend_text = bottom_trend.to_string(index=False)
             ai_prompt = f"""
 You are a healthcare data analyst. Based on the following data:
 - Composite Score = Top-box % - Bottom-box %
@@ -209,7 +195,7 @@ Weakest Performing:
 {weakest.to_string(index=False)}
 
 Bottom-box Trend by Year:
-{bottom_trend.to_string(index=False)}
+{trend_text}
 """
 
             try:
@@ -223,7 +209,7 @@ Bottom-box Trend by Year:
                         temperature=0,
                         max_tokens=500
                     )
-                    summary = response.choices[0].message["content"]
+                    summary = response.choices[0].message.content
                     st.markdown("### 🤖 AI Summary & Recommendations")
                     st.write(summary)
             except Exception as e:
