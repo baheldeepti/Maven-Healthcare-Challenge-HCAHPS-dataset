@@ -381,7 +381,7 @@ with tabs[4]:
     # AI Summary
     if st.checkbox("📄 Generate AI Insights for Response Rate Correlation"):
         trend_summary = combined_trends.pivot(index='Year', columns='Region/State', values='Response Rate (%)').round(2)
-        state_corr_text = "\n".join([f"{state}: {corr}" for state, corr in state_corrs])
+        # state_corr_text = "\n".join([f"{state}: {corr}" for state, corr in state_corrs])
 
         ai_prompt = f"""
 You are a healthcare survey analytics expert. Based on:
@@ -400,7 +400,7 @@ Write:
         try:
             with st.spinner("🔍 Generating AI-driven summary..."):
                 response = openai.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a healthcare survey data specialist."},
                         {"role": "user", "content": ai_prompt}
