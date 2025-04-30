@@ -127,7 +127,7 @@ with tabs[0]:
         try:
             with st.spinner("🔎 Analyzing trends with GPT-4..."):
                 response = openai.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a healthcare analytics expert."},
                         {"role": "user", "content": llm_prompt}
@@ -201,7 +201,7 @@ Bottom-box Trend by Year:
             try:
                 with st.spinner("Generating AI recommendations..."):
                     response = openai.chat.completions.create(
-                        model="gpt-4",
+                        model="gpt-3.5-turbo"
                         messages=[
                             {"role": "system", "content": "You are a healthcare quality consultant."},
                             {"role": "user", "content": ai_prompt}
@@ -326,7 +326,7 @@ with tabs[3]:
         try:
             with st.spinner("Generating AI summary of regional differences..."):
                 response = openai.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a healthcare data insights consultant."},
                         {"role": "user", "content": ai_prompt}
@@ -566,7 +566,7 @@ Bottom States:
         try:
             with st.spinner("Generating AI summary..."):
                 response = openai.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are a healthcare performance improvement expert."},
                         {"role": "user", "content": ai_prompt}
