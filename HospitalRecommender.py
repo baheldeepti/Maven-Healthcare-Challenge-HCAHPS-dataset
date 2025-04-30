@@ -201,7 +201,7 @@ Bottom-box Trend by Year:
             try:
                 with st.spinner("Generating AI recommendations..."):
                     response = openai.chat.completions.create(
-                        model="gpt-3.5-turbo"
+                        model="gpt-3.5-turbo",
                         messages=[
                             {"role": "system", "content": "You are a healthcare quality consultant."},
                             {"role": "user", "content": ai_prompt}
