@@ -223,60 +223,62 @@ with tabs[2]:
     st.subheader("📉 Most Declined Patient Experience Questions")
 
     if 'Improvement' in pivot.columns:
-        # Filter most declined questions
-        declined = pivot[pivot['Improvement'] < 0].sort_values('Improvement').reset_index()
+        # Step 1: Extract valid years dynamically
+        year_cols = [col for col in pivot.columns if str(col).isdigit()]
+        first_year, last_year = year_cols[0], year_cols[-1]
+
+        # Step 2: Filter most declined questions
+        declined = pivot[pivot['Improvement'] < 0].copy()
+        declined = declined.sort_values('Improvement').reset_index(drop=True)
         top_declined = declined.head(10)
 
-        # Barplot
+        # Step 3: Visual - Declined barplot
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(data=top_declined, y='Question', x='Improvement', hue='Measure', palette='flare', ax=ax, dodge=False)
+        sns.barplot(
+            data=top_declined,
+            y='Question',
+            x='Improvement',
+            hue='Measure',
+            palette='flare',
+            ax=ax,
+            dodge=False
+        )
         ax.set_title("Top 10 Declined Questions by Composite Score")
         st.pyplot(fig)
 
-        # Display table
+        # Step 4: Table - Decline Details
         st.markdown("### 📋 Detailed Declines")
         st.dataframe(top_declined[['Measure', 'Question', 'Improvement']])
 
-        # Show % Change Context
-        st.markdown("### 📊 Percent Change (Contextual View)")
-        first_year = pivot.columns[0]
-        last_year = pivot.columns[-2]  # Improvement is last column
-        declined[['Start Score', 'End Score']] = declined[[first_year, last_year]]
-        st.dataframe(declined[['Measure', 'Question', 'Start Score', 'End Score', 'Improvement']].head(10))
+        # Step 5: Add start/end scores and conditional formatting
+        declined['Start Score'] = declined[first_year]
+        declined['End Score'] = declined[last_year]
 
-        # AI Summary
-        if st.checkbox("📄 Generate AI Insights for Declined Scores"):
-            prompt = f"""
-You are a healthcare analytics expert. The following HCAHPS questions have shown the greatest declines in composite patient experience scores (Top-box % - Bottom-box %) between {first_year} and {last_year}.
-Provide:
-1. An executive summary.
-2. Hypotheses for why these areas might have declined.
-3. Data-driven recommendations to reverse these trends.
+        # Optional: Add visual indicators
+        def format_change(val):
+            if val < -5:
+                return f"🔻 {val:.2f}"
+            elif val < 0:
+                return f"⬇️ {val:.2f}"
+            else:
+                return f"{val:.2f}"
 
-Declined Questions:
-{top_declined[['Measure', 'Question', 'Improvement']].to_string(index=False)}
-"""
+        styled_df = declined[['Measure', 'Question', 'Start Score', 'End Score', 'Improvement']].head(10).copy()
+        styled_df['Improvement'] = styled_df['Improvement'].apply(format_change)
 
-            try:
-                with st.spinner("Analyzing declining scores with GPT-4..."):
-                    response = openai.chat.completions.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "You are a healthcare improvement consultant."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        temperature=0,
-                        max_tokens=500
-                    )
-                    ai_output = response.choices[0].message["content"]
-                    st.markdown("### 🤖 AI Summary & Recommendations")
-                    st.write(ai_output)
-            except Exception as e:
-                st.error(f"⚠️ Error generating AI insights: {e}")
+        st.markdown("### 📊 Percent Change with Trend Indicators")
+        st.dataframe(
+            styled_df.style
+            .highlight_min(subset=['Improvement'], color='salmon', axis=0)
+            .highlight_max(subset=['Improvement'], color='lightgreen', axis=0)
+            .format({"Start Score": "{:.1f}", "End Score": "{:.1f}"})
+        )
     else:
-        st.info("Insufficient year data to compute declines.")
+        st.warning("⚠️ 'Improvement' column not found in the dataset.")
+ent']])
 
 
+      
 # Tab 3: Regional Differences
 with tabs[3]:
     st.subheader("🗺️ Regional Average Scores by Year")
