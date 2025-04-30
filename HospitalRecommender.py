@@ -388,7 +388,7 @@ with tabs[4]:
     # Correlation merge
     joined = pd.merge(
         state_results_df,
-        responses_df.drop(columns=['State Name'], errors='ignore'),,
+        responses_df.drop(columns=['State Name'], errors='ignore'),
         on=['Release Period','State'],
         how='left'
     )
