@@ -275,7 +275,6 @@ with tabs[2]:
         )
     else:
         st.warning("⚠️ 'Improvement' column not found in the dataset.")
-ent']])
 
 
       
