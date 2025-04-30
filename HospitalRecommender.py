@@ -56,6 +56,7 @@ national_results_df = pd.merge(national_results_df, merged_measures_questions[['
 
 # Ensure 'State Name' exists by merging correctly
 if 'State' in responses_df.columns and 'State' in states_df.columns:
+    print
     responses_df = pd.merge(responses_df, states_df[['State', 'State Name', 'Region']], on='State', how='left')
 
 if 'State' in state_results_df.columns and 'State' in states_df.columns:
@@ -65,13 +66,21 @@ if 'State' in state_results_df.columns and 'State' in states_df.columns:
 state_results_df.dropna(subset=['Question', 'Top-box Percentage', 'Measure'], inplace=True)
 national_results_df.dropna(subset=['Question', 'Top-box Percentage', 'Measure'], inplace=True)
 
-# Join datasets for correlation tab later
-joined = pd.merge(state_results_df, responses_df, on=['Release Period', 'State'], how='left')
+joined = pd.merge(
+    state_results_df,
+    responses_df.drop(columns=['State Name'], errors='ignore'),
+    on=['Release Period', 'State'],
+    how='left',
+    suffixes=('', '_resp')
+)
+# Check if 'State Name' exists, either from state_results_df or responses_df
+if 'State Name' not in joined.columns and 'State Name_resp' in joined.columns:
+    joined.rename(columns={'State Name_resp': 'State Name'}, inplace=True)
 
-# Safety check for merge success
 if 'State Name' not in joined.columns:
-    st.error("\u274c 'State Name' column is missing in merged data. Please check the dataset.")
-
+    st.error("❌ 'State Name' column is missing in merged data. Please check the dataset.")
+else:
+    st.success("✅ Data loaded and merged successfully with 'State Name' available.")
 
 
 # Setup Tabs
