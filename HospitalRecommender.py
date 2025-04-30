@@ -112,9 +112,8 @@ with tabs[0]:
     ax.legend(title='Measure', bbox_to_anchor=(1.05, 1))
     ax.grid(True)
     st.pyplot(fig)
-
     # Optional AI Summary
-   st.markdown("### \ud83e\udd16 AI Summary (Beta)")
+    st.markdown("### \ud83e\udd16 AI Summary (Beta)")
     if st.checkbox("Generate AI Summary of National Trends"):
         trend_stats = (
             trend_data.groupby("Measure")['Top-box Percentage']
