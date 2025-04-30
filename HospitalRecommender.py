@@ -114,24 +114,18 @@ with tabs[0]:
     st.pyplot(fig)
 
     # Optional AI Summary
-    st.markdown("### 🤖 AI Summary (Beta)")
+   st.markdown("### \ud83e\udd16 AI Summary (Beta)")
     if st.checkbox("Generate AI Summary of National Trends"):
-        # Aggregate stats for context
         trend_stats = (
-            measure_year_trend.groupby("Measure")['Top-box Percentage']
+            trend_data.groupby("Measure")['Top-box Percentage']
             .agg(['min', 'max', 'mean'])
             .reset_index()
             .round(2)
-            .rename(columns={
-                'min': 'Min %',
-                'max': 'Max %',
-                'mean': 'Mean %'
-            })
+            .rename(columns={'min': 'Min %', 'max': 'Max %', 'mean': 'Mean %'})
         )
 
         st.dataframe(trend_stats)
 
-        # Prepare LLM prompt
         llm_prompt = f"""
         You are a healthcare analytics expert. Based on the following national HCAHPS measure summary (Top-box %), write an executive-level narrative.
         Identify key improvements, declines, and any surprising patterns.
@@ -140,7 +134,7 @@ with tabs[0]:
         """
 
         try:
-            with st.spinner("🔎 Analyzing trends with GPT-4..."):
+            with st.spinner("\ud83d\udd0e Analyzing trends with GPT-4..."):
                 response = openai.chat.completions.create(
                     model="gpt-4",
                     messages=[
@@ -150,12 +144,11 @@ with tabs[0]:
                     temperature=0,
                     max_tokens=300
                 )
-                summary = response.choices[0].message['content']
-                st.markdown("### 📄 Executive Summary")
+                summary = response.choices[0].message.content
+                st.markdown("### \ud83d\udcc4 Executive Summary")
                 st.write(summary)
         except Exception as e:
-            st.error(f"⚠️ Error generating AI summary: {e}")
-
+            st.error(f"\u26a0\ufe0f Error generating AI summary: {e}")
 
 # Tab 1: Most Improved Areas with Composite Score and Bottom-box Trends
 with tabs[1]:
