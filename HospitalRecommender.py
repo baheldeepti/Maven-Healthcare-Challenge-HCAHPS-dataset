@@ -341,6 +341,12 @@ with tabs[3]:
     
 
 # Tab 4: Response Rate Insights
+from openai import OpenAI
+
+# instantiate once at the top of your script
+client = OpenAI(api_key=openai.api_key)
+
+# Tab 4: Response Rate Insights
 with tabs[4]:
     st.subheader("📬 National & State Response Rate Trends")
 
@@ -356,36 +362,64 @@ with tabs[4]:
     )
 
     # State-level trends
-    state_trends = responses_df[responses_df['State Name'].isin(selected_states)]
-    state_trends = state_trends.groupby(['Year', 'State Name'])['Response Rate (%)'].mean().reset_index()
-    state_trends.rename(columns={'State Name': 'Region/State'}, inplace=True)
+    state_trends = (
+        responses_df[responses_df['State Name'].isin(selected_states)]
+        .groupby(['Year','State Name'])['Response Rate (%)']
+        .mean()
+        .reset_index()
+    )
+    state_trends.rename(columns={'State Name':'Region/State'}, inplace=True)
 
     # Combine all trends
     combined_trends = pd.concat([national_trend, state_trends], ignore_index=True)
 
-    # Line chart
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.lineplot(data=combined_trends, x='Year', y='Response Rate (%)', hue='Region/State', marker='o', ax=ax)
+    # Plot
+    fig, ax = plt.subplots(figsize=(12,6))
+    sns.lineplot(
+        data=combined_trends,
+        x='Year', y='Response Rate (%)',
+        hue='Region/State', marker='o',
+        ax=ax
+    )
     ax.set_title("📬 HCAHPS Survey Response Rate Trends")
     ax.grid(True)
     st.pyplot(fig)
 
-    # Merge for correlation analysis
-    joined = pd.merge(state_results_df, responses_df, on=['Release Period', 'State'], how='left')
-
-    # National correlation
+    # Correlation merge
+    joined = pd.merge(
+        state_results_df,
+        responses_df,
+        on=['Release Period','State'],
+        how='left'
+    )
     national_corr = joined['Top-box Percentage'].corr(joined['Response Rate (%)'])
-    st.metric(label="🧮 National Correlation: Top-box % vs Response Rate", value=f"{national_corr:.2f}")
-
+    st.metric(
+        label="🧮 National Correlation: Top-box % vs Response Rate",
+        value=f"{national_corr:.2f}"
+    )
 
     # AI Summary
     if st.checkbox("📄 Generate AI Insights for Response Rate Correlation"):
-        trend_summary = combined_trends.pivot(index='Year', columns='Region/State', values='Response Rate (%)').round(2)
-        # state_corr_text = "\n".join([f"{state}: {corr}" for state, corr in state_corrs])
+        # Pivot for trend summary
+        trend_summary = (
+            combined_trends
+            .pivot(index='Year', columns='Region/State', values='Response Rate (%)')
+            .round(2)
+        )
+
+        # Compute per-state correlations
+        state_corrs = []
+        for state in selected_states:
+            df_s = joined[joined['State Name'] == state]
+            corr = df_s['Top-box Percentage'].corr(df_s['Response Rate (%)'])
+            state_corrs.append((state, corr or 0.0))
+        state_corr_text = "\n".join(f"{s}: {c:.2f}" for s,c in state_corrs)
 
         ai_prompt = f"""
 You are a healthcare survey analytics expert. Based on:
 - National correlation = {national_corr:.2f}
+- State-level correlations:
+{state_corr_text}
 
 And response rate trends from {int(national_trend['Year'].min())} to {int(national_trend['Year'].max())}:
 
@@ -399,35 +433,100 @@ Write:
 
         try:
             with st.spinner("🔍 Generating AI-driven summary..."):
-                response = openai.chat.completions.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a healthcare survey data specialist."},
-                        {"role": "user", "content": ai_prompt}
+                        {"role":"system","content":"You are a healthcare survey data specialist."},
+                        {"role":"user","content": ai_prompt}
                     ],
                     temperature=0,
                     max_tokens=500
                 )
-                summary = response.choices[0].message["content"]
-                st.markdown("### 🤖 AI Summary & Recommendations")
-                st.write(summary)
+            st.markdown("### 🤖 AI Summary & Recommendations")
+            st.write(response.choices[0].message.content)
         except Exception as e:
-            st.error(f"⚠️ Error generating AI summary: {e}")
+            st.error(f"⚠️ AI call failed: {e}")
 
 
 # Tab 5: Opportunity Matrix
+# Tab 5: Opportunity Matrix with AI Explanation & Insights
 with tabs[5]:
     st.subheader("🧭 Opportunity Matrix")
+
     if 'Improvement' in pivot.columns:
-        pivot['Latest Score'] = pivot[pivot.columns[-2]]
+        # Bring indices back into columns so we have Measure & Question fields
+        omni = pivot.reset_index().copy()
+        omni['Latest Score'] = omni[omni.columns[-2]]  # second-to-last column is last year’s composite
+
+        # Plot scatter of Latest Score vs Improvement
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(data=pivot, x='Latest Score', y='Improvement', ax=ax)
-        ax.axvline(pivot['Latest Score'].median(), color='red', linestyle='--')
-        ax.axhline(pivot['Improvement'].median(), color='blue', linestyle='--')
+        sns.scatterplot(
+            data=omni,
+            x='Latest Score',
+            y='Improvement',
+            ax=ax,
+            s=100,
+            edgecolor='w'
+        )
+        # median lines split into four quadrants
+        med_x = omni['Latest Score'].median()
+        med_y = omni['Improvement'].median()
+        ax.axvline(med_x, color='red', linestyle='--', label=f"Median Score ({med_x:.1f})")
+        ax.axhline(med_y, color='blue', linestyle='--', label=f"Median Improvement ({med_y:.1f})")
+        ax.set_xlabel("Latest Composite Score (Top-box % − Bottom-box %)")
+        ax.set_ylabel("Improvement (∆ Composite Score)")
         ax.set_title("Opportunity Matrix (Latest Score vs Improvement)")
+        ax.legend(loc='lower right')
         st.pyplot(fig)
+
+        # Explain the quadrants
+        st.markdown("#### Quadrant Definitions")
+        st.markdown("""
+- **Top-Right** (High Score, High Improvement): Strengths to **maintain** and model elsewhere.  
+- **Top-Left** (Low Score, High Improvement): **Rising stars**—invest to accelerate gains.  
+- **Bottom-Right** (High Score, Low/Negative Improvement): **Stagnant leaders**—monitor for early decline.  
+- **Bottom-Left** (Low Score, Low/Negative Improvement): **Critical laggards**—prioritize root-cause analysis here.
+""")
+
+        # AI-generated narrative & recommendations
+        if st.checkbox("🤖 Generate AI Insights for Opportunity Matrix"):
+            # prepare a concise list of top items in each quadrant
+            tr = omni[(omni['Latest Score'] >= med_x) & (omni['Improvement'] >= med_y)]['Question'].tolist()
+            tl = omni[(omni['Latest Score'] < med_x) & (omni['Improvement'] >= med_y)]['Question'].tolist()
+            br = omni[(omni['Latest Score'] >= med_x) & (omni['Improvement'] < med_y)]['Question'].tolist()
+            bl = omni[(omni['Latest Score'] < med_x) & (omni['Improvement'] < med_y)]['Question'].tolist()
+
+            ai_prompt = f"""
+You are a healthcare quality improvement consultant. Here is an opportunity matrix of HCAHPS questions, showing their most recent composite scores and improvements since the first year:
+
+Rising Stars (Low Score, High Improvement): {tl}
+Sustained Champions (High Score, High Improvement): {tr}
+Potential Complacency (High Score, Low Improvement): {br}
+Critical Laggards (Low Score, Low Improvement): {bl}
+
+Please:
+1. Summarize these four categories in 2–3 sentences each.
+2. Provide 2–3 tailored recommendations for the Critical Laggards.
+3. Suggest how to replicate Success Factors from the Sustained Champions in other areas.
+"""
+
+            try:
+                with st.spinner("Generating AI-driven narrative…"):
+                    response = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": "You are an expert in healthcare patient experience analytics."},
+                            {"role": "user",   "content": ai_prompt}
+                        ],
+                        temperature=0,
+                        max_tokens=500
+                    )
+                st.markdown("### 🧠 AI-Generated Explanation & Insights")
+                st.write(response.choices[0].message.content)
+            except Exception as e:
+                st.error(f"⚠️ AI Insights failed: {e}")
     else:
-        st.info("Opportunity matrix requires multi-year data.")
+        st.info("Opportunity matrix requires multi-year data (an ‘Improvement’ column).")
 
 # Tab 6: AI Recommendations
 with tabs[6]:
