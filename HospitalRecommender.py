@@ -155,28 +155,28 @@ with tabs[1]:
 
         positive_improvement = improved[improved['Improvement'] > 0].sort_values('Improvement', ascending=False)
         weakest = improved.sort_values('Improvement').head(5)[['Measure', 'Question', 'Improvement']]
-
+        top_improved = positive_improvement[['Measure', 'Question', 'Improvement']].head(10)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(data=top_improved, y='Question', x='Improvement', hue='Measure', palette='crest', ax=ax, dodge=False)
+        ax.set_title("Top 10 Questions by Composite Sentiment Improvement (Top-box % - Bottom-box %)")
+        st.pyplot(fig)
+        st.markdown("### 📈 Top Improved Composite Score Questions")
+        st.dataframe(top_improved)
+        st.markdown("### ⚠️ Weakest Performing Questions (Composite Score Decline)")
+        st.dataframe(weakest)
+        bottom_trend = state_results_df.groupby('Year')['Bottom-box Percentage'].mean().reset_index()
+        fig2, ax2 = plt.subplots(figsize=(8, 4))
+        sns.lineplot(data=bottom_trend, x='Year', y='Bottom-box Percentage', marker="o", ax=ax2)
+        ax2.set_title("National Bottom-box % Trend Over Time")
+        ax2.grid(True)
+        st.pyplot(fig2)
         if not positive_improvement.empty:
-            top_improved = positive_improvement[['Measure', 'Question', 'Improvement']].head(10)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=top_improved, y='Question', x='Improvement', hue='Measure', palette='crest', ax=ax, dodge=False)
-            ax.set_title("Top 10 Questions by Composite Sentiment Improvement (Top-box % - Bottom-box %)")
-            st.pyplot(fig)
-            st.markdown("### 📈 Top Improved Composite Score Questions")
-            st.dataframe(top_improved)
-            st.markdown("### ⚠️ Weakest Performing Questions (Composite Score Decline)")
-            st.dataframe(weakest)
-
-            bottom_trend = state_results_df.groupby('Year')['Bottom-box Percentage'].mean().reset_index()
-            fig2, ax2 = plt.subplots(figsize=(8, 4))
-            sns.lineplot(data=bottom_trend, x='Year', y='Bottom-box Percentage', marker="o", ax=ax2)
-            ax2.set_title("National Bottom-box % Trend Over Time")
-            ax2.grid(True)
-            st.pyplot(fig2)
+            st.success("Great news! Several areas have shown positive improvements in patient experience.")
         else:
             st.warning("No positive composite score improvements found. Showing insights based on weak areas.")
 
         if st.checkbox("📄 Generate AI Summary & Recommendations (Composite + Bottom-box)"):
+            bottom_trend = state_results_df.groupby('Year')['Bottom-box Percentage'].mean().reset_index()
             trend_text = bottom_trend.to_string(index=False)
             ai_prompt = f"""
 You are a healthcare data analyst. Based on the following data:
