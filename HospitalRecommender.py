@@ -386,8 +386,6 @@ with tabs[4]:
         ai_prompt = f"""
 You are a healthcare survey analytics expert. Based on:
 - National correlation = {national_corr:.2f}
-- State-level correlations:
-{state_corr_text}
 
 And response rate trends from {int(national_trend['Year'].min())} to {int(national_trend['Year'].max())}:
 
