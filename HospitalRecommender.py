@@ -72,10 +72,7 @@ joined = pd.merge(state_results_df, responses_df, on=['Release Period', 'State']
 if 'State Name' not in joined.columns:
     st.error("\u274c 'State Name' column is missing in merged data. Please check the dataset.")
 
-# Continue building tabs...
-# (You can paste your existing tab code here. The merge and column fix above resolves the KeyError)
 
-st.success("\u2705 Data loaded and merged successfully with 'State Name' available.")
 
 # Setup Tabs
 tabs = st.tabs([
