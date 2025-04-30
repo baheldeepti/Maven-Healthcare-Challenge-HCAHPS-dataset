@@ -227,61 +227,63 @@ with tabs[2]:
         year_cols = [col for col in pivot.columns if str(col).isdigit()]
         first_year, last_year = year_cols[0], year_cols[-1]
 
-        # Step 2: Filter most declined questions
-        declined = pivot[pivot['Improvement'] < 0].copy()
+        # Step 2: Prepare full table with Measure and Question
+        declined = pivot.reset_index().copy()  # FIXED: Reset index to bring Measure and Question as columns
+        declined = declined[declined['Improvement'] < 0]
         declined = declined.sort_values('Improvement').reset_index(drop=True)
         top_declined = declined.head(10)
 
-        # Step 3: Visual - Declined barplot
-        # Step 3: Visual - Declined barplot
-        if not top_declined.empty and all(col in top_declined.columns for col in ['Question', 'Improvement', 'Measure']):
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(
-                data=top_declined,
-                y='Question',
-                x='Improvement',
-                hue='Measure',
-                palette='flare',
-                ax=ax,
-                dodge=False
-            )
-            ax.set_title("Top 10 Declined Questions by Composite Score")
-            st.pyplot(fig)
+        # DEBUGGING aid: show available columns if error occurs
+        if not all(col in top_declined.columns for col in ['Measure', 'Question', 'Improvement']):
+            st.error("Missing required columns in `top_declined`. Columns found:")
+            st.write(top_declined.columns.tolist())
         else:
-            st.warning("⚠️ Not enough data to plot decline chart. Please check year range or filter settings.")
-
-
-
-        # Step 4: Table - Decline Details
-        st.markdown("### 📋 Detailed Declines")
-        st.dataframe(top_declined[['Measure', 'Question', 'Improvement']])
-
-        # Step 5: Add start/end scores and conditional formatting
-        declined['Start Score'] = declined[first_year]
-        declined['End Score'] = declined[last_year]
-
-        # Optional: Add visual indicators
-        def format_change(val):
-            if val < -5:
-                return f"🔻 {val:.2f}"
-            elif val < 0:
-                return f"⬇️ {val:.2f}"
+            # Step 3: Visual - Declined barplot
+            if not top_declined.empty:
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.barplot(
+                    data=top_declined,
+                    y='Question',
+                    x='Improvement',
+                    hue='Measure',
+                    palette='flare',
+                    ax=ax,
+                    dodge=False
+                )
+                ax.set_title("Top 10 Declined Questions by Composite Score")
+                st.pyplot(fig)
             else:
-                return f"{val:.2f}"
+                st.warning("⚠️ No declined questions found to visualize.")
 
-        styled_df = declined[['Measure', 'Question', 'Start Score', 'End Score', 'Improvement']].head(10).copy()
-        styled_df['Improvement'] = styled_df['Improvement'].apply(format_change)
+            # Step 4: Table - Decline Details
+            st.markdown("### 📋 Detailed Declines")
+            st.dataframe(top_declined[['Measure', 'Question', 'Improvement']])
 
-        st.markdown("### 📊 Percent Change with Trend Indicators")
-        st.dataframe(
-            styled_df.style
-            .highlight_min(subset=['Improvement'], color='salmon', axis=0)
-            .highlight_max(subset=['Improvement'], color='lightgreen', axis=0)
-            .format({"Start Score": "{:.1f}", "End Score": "{:.1f}"})
-        )
+            # Step 5: Add start/end scores and conditional formatting
+            declined['Start Score'] = declined[first_year]
+            declined['End Score'] = declined[last_year]
+
+            # Optional: Add visual indicators
+            def format_change(val):
+                if val < -5:
+                    return f"🔻 {val:.2f}"
+                elif val < 0:
+                    return f"⬇️ {val:.2f}"
+                else:
+                    return f"{val:.2f}"
+
+            styled_df = declined[['Measure', 'Question', 'Start Score', 'End Score', 'Improvement']].head(10).copy()
+            styled_df['Improvement'] = styled_df['Improvement'].apply(format_change)
+
+            st.markdown("### 📊 Percent Change with Trend Indicators")
+            st.dataframe(
+                styled_df.style
+                .highlight_min(subset=['Improvement'], color='salmon', axis=0)
+                .highlight_max(subset=['Improvement'], color='lightgreen', axis=0)
+                .format({"Start Score": "{:.1f}", "End Score": "{:.1f}"})
+            )
     else:
         st.warning("⚠️ 'Improvement' column not found in the dataset.")
-
 
       
 # Tab 3: Regional Differences
