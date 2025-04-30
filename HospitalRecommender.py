@@ -77,10 +77,7 @@ joined = pd.merge(
 if 'State Name' not in joined.columns and 'State Name_resp' in joined.columns:
     joined.rename(columns={'State Name_resp': 'State Name'}, inplace=True)
 
-if 'State Name' not in joined.columns:
-    st.error("❌ 'State Name' column is missing in merged data. Please check the dataset.")
-else:
-    st.success("✅ Data loaded and merged successfully with 'State Name' available.")
+
 
 
 # Setup Tabs
