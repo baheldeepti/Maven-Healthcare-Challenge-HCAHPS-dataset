@@ -17,7 +17,7 @@ openai.api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 # Streamlit Setup
 # --------------------------------
 st.set_page_config(page_title="HCAHPS Self-Service Explorer", layout="wide")
-st.title("\ud83d\udccb HCAHPS Self-Service Insights Dashboard")
+st.title("HCAHPS Self-Service Insights Dashboard")
 sns.set(style="whitegrid")
 plt.close('all')
 
