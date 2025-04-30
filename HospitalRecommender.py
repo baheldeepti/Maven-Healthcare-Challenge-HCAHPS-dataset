@@ -212,7 +212,7 @@ Weakest Performing:
 {weakest.to_string(index=False)}
 
 Bottom-box Trend by Year:
-{bottom_trend.to_string(index=False)}
+# {bottom_trend.to_string(index=False)}
 """
 
             try:
