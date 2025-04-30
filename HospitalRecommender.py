@@ -398,16 +398,6 @@ with tabs[4]:
     national_corr = joined['Top-box Percentage'].corr(joined['Response Rate (%)'])
     st.metric(label="🧮 National Correlation: Top-box % vs Response Rate", value=f"{national_corr:.2f}")
 
-    # State-level correlations
-    st.markdown("### 📊 State-Level Correlation with Top-box %")
-    state_corrs = []
-    for state in selected_states:
-        state_data = joined[joined['State Name'] == state]
-        corr = state_data['Top-box Percentage'].corr(state_data['Response Rate (%)'])
-        state_corrs.append((state, round(corr, 2) if pd.notnull(corr) else "N/A"))
-
-    state_corr_df = pd.DataFrame(state_corrs, columns=['State', 'Correlation'])
-    st.dataframe(state_corr_df)
 
     # AI Summary
     if st.checkbox("📄 Generate AI Insights for Response Rate Correlation"):
