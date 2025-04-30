@@ -335,7 +335,7 @@ with tabs[3]:
                     max_tokens=400
                 )
                 st.markdown("### 🤖 AI Summary & Recommendations")
-                st.write(response.choices[0].message["content"])
+                st.write(response.choices[0].message.content)
         except Exception as e:
             st.error(f"⚠️ Error generating AI insights: {e}")
     
