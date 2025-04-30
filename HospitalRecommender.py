@@ -313,19 +313,19 @@ with tabs[3]:
     # Optional AI Insights
     if st.checkbox("📄 Generate AI Summary of Regional Differences"):
         ai_prompt = f"""
-You are a healthcare analyst reviewing HCAHPS regional performance for {selected_year}.
-Based on average Top-box percentages per region, summarize:
-1. The highest and lowest scoring regions.
-2. Possible factors driving the disparities (e.g., rural vs urban, staffing, access).
-3. Regional strategies to improve patient experience in low-performing areas.
-
-Data:
-{chart_df[['Region', 'Top-box Percentage']].to_string(index=False)}
-"""
-
+    You are a healthcare analyst reviewing HCAHPS regional performance for {selected_year}.
+    Based on average Top-box percentages per region, summarize:
+    1. The highest and lowest scoring regions.
+    2. Possible factors driving the disparities (e.g., rural vs urban, staffing, access).
+    3. Regional strategies to improve patient experience in low-performing areas.
+    
+    Data:
+    {chart_df[['Region', 'Top-box Percentage']].to_string(index=False)}
+    """
+    
         try:
             with st.spinner("Generating AI summary of regional differences..."):
-                response = openai.chat.completions.create(
+                response = openai.ChatCompletion.create(
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a healthcare data insights consultant."},
@@ -335,10 +335,10 @@ Data:
                     max_tokens=400
                 )
                 st.markdown("### 🤖 AI Summary & Recommendations")
-                st.write(response.choices[0].message['content'])
+                st.write(response.choices[0].message["content"])
         except Exception as e:
             st.error(f"⚠️ Error generating AI insights: {e}")
-
+    
 
 # Tab 4: Response Rate Insights
 with tabs[4]:
