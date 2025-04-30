@@ -571,10 +571,11 @@ with tabs[7]:
     st.dataframe(year_df[['Measure', 'State Score', 'Top-box Percentage']])
 
 # Tab 8: Patient Experience Heatmap + Leaderboard + Enhancements
+# Tab 8: Patient Experience Heatmap + Leaderboard + AI Insights
 with tabs[8]:
     st.subheader("🗺️ Patient Experience Score by State")
 
-    # Year and Measure selectors
+    # Year & measure selectors
     selected_year = st.slider(
         "Select Year", 
         int(state_results_df['Year'].min()), 
@@ -582,14 +583,13 @@ with tabs[8]:
         int(state_results_df['Year'].max()), 
         key="heatmap_year"
     )
-
     selected_measure = st.selectbox(
         "Select Measure", 
         sorted(state_results_df['Measure'].dropna().unique()), 
         key="heatmap_measure"
     )
 
-    # Filter for selected year and measure
+    # Filter data
     filtered_df = state_results_df[
         (state_results_df['Year'] == selected_year) & 
         (state_results_df['Measure'] == selected_measure)
@@ -597,30 +597,25 @@ with tabs[8]:
     national_avg = filtered_df['Top-box Percentage'].mean()
     state_avg = filtered_df.groupby('State')['Top-box Percentage'].mean().reset_index()
 
-    st.metric(label=f"🇺🇸 National Avg – {selected_measure} ({selected_year})", value=f"{national_avg:.1f}%")
+    st.metric(f"🇺🇸 National Avg – {selected_measure} ({selected_year})", f"{national_avg:.1f}%")
 
-    # Plotly heatmap
+    # Heatmap
     try:
         fig = px.choropleth(
-            state_avg,
-            locations="State",
-            locationmode="USA-states",
-            scope="usa",
-            color="Top-box Percentage",
-            color_continuous_scale="RdYlGn",
+            state_avg, locations="State", locationmode="USA-states", scope="usa",
+            color="Top-box Percentage", color_continuous_scale="RdYlGn",
             title=f"{selected_measure} – Top-box % by State ({selected_year})",
-            labels={"Top-box Percentage": "Top-box %"}
+            labels={"Top-box Percentage":"Top-box %"}
         )
-        fig.update_layout(margin={"r": 0, "t": 40, "l": 0, "b": 0})
+        fig.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.warning("Plotly failed to render the heatmap.")
         st.error(e)
 
-    # Leaderboard
+    # Leaderboard & bar chart
     st.subheader("🏆 State Leaderboard – Top-box %")
     leaderboard = state_avg.sort_values('Top-box Percentage', ascending=False).reset_index(drop=True)
-
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"#### 🟢 Top 10 States for '{selected_measure}'")
@@ -629,55 +624,56 @@ with tabs[8]:
         st.markdown(f"#### 🔴 Bottom 10 States for '{selected_measure}'")
         st.dataframe(leaderboard.tail(10).sort_values('Top-box Percentage').style.background_gradient(cmap='Reds_r', subset=['Top-box Percentage']))
 
-    # Horizontal Bar Chart beside map
-    st.subheader("📊 Ranked Scores by State")
-    bar_fig, bar_ax = plt.subplots(figsize=(10, 10))
+    bar_fig, bar_ax = plt.subplots(figsize=(10,10))
     sns.barplot(data=leaderboard, x='Top-box Percentage', y='State', palette='Spectral', ax=bar_ax)
     bar_ax.set_title(f"{selected_measure} – State Rankings ({selected_year})")
     st.pyplot(bar_fig)
 
-    # Download leaderboard
     csv = leaderboard.to_csv(index=False).encode('utf-8')
-    st.download_button("⬇️ Download Leaderboard CSV", data=csv, file_name=f"leaderboard_{selected_measure}_{selected_year}.csv", mime='text/csv')
+    st.download_button("⬇️ Download Leaderboard CSV", data=csv,
+                       file_name=f"leaderboard_{selected_measure}_{selected_year}.csv",
+                       mime='text/csv')
 
-    # AI Summary
+    # AI Insights
     if st.checkbox("📄 Generate AI Summary for Top & Bottom States"):
         top_states = leaderboard.head(5).to_string(index=False)
         bottom_states = leaderboard.tail(5).sort_values('Top-box Percentage').to_string(index=False)
 
         ai_prompt = f"""
 You are a healthcare quality consultant reviewing HCAHPS patient experience scores.
-The measure is: {selected_measure}
-The year is: {selected_year}
+Measure: {selected_measure}
+Year: {selected_year}
 
-Based on this, please:
-1. Identify standout states (Top 5)
-2. Call out low-performing states (Bottom 5)
-3. Suggest 2–3 actions for states at the bottom of the list to improve.
-
-Top States:
+Top 5 States:
 {top_states}
 
-Bottom States:
+Bottom 5 States:
 {bottom_states}
+
+Please:
+1. Identify and briefly describe standout (top) states.
+2. Point out key challenges in the bottom states.
+3. Provide 2–3 targeted, data-driven recommendations for improvement in the bottom group.
 """
 
         try:
-            with st.spinner("Generating AI summary..."):
-                response = openai.chat.completions.create(
+            with st.spinner("Generating AI summary…"):
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "You are a healthcare performance improvement expert."},
-                        {"role": "user", "content": ai_prompt}
+                        {"role":"system","content":"You are a healthcare performance improvement expert."},
+                        {"role":"user",  "content": ai_prompt}
                     ],
                     temperature=0,
                     max_tokens=500
                 )
-                summary = response.choices[0].message['content']
-                st.markdown("### 🤖 AI Insights & Recommendations")
-                st.write(summary)
+            st.markdown("### 🤖 AI Insights & Recommendations")
+            # ← use attribute access, not dict-style
+            st.write(response.choices[0].message.content)
+
         except Exception as e:
-            st.error(f"⚠️ Error generating AI summary: {e}")
+            st.error(f"⚠️ AI Insights failed: {e}")
+    
 
 # Tab 9: Benchmarking Dashboard
 with tabs[9]:
