@@ -233,18 +233,24 @@ with tabs[2]:
         top_declined = declined.head(10)
 
         # Step 3: Visual - Declined barplot
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(
-            data=top_declined,
-            y='Question',
-            x='Improvement',
-            hue='Measure',
-            palette='flare',
-            ax=ax,
-            dodge=False
-        )
-        ax.set_title("Top 10 Declined Questions by Composite Score")
-        st.pyplot(fig)
+        # Step 3: Visual - Declined barplot
+        if not top_declined.empty and all(col in top_declined.columns for col in ['Question', 'Improvement', 'Measure']):
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.barplot(
+                data=top_declined,
+                y='Question',
+                x='Improvement',
+                hue='Measure',
+                palette='flare',
+                ax=ax,
+                dodge=False
+            )
+            ax.set_title("Top 10 Declined Questions by Composite Score")
+            st.pyplot(fig)
+        else:
+            st.warning("⚠️ Not enough data to plot decline chart. Please check year range or filter settings.")
+
+
 
         # Step 4: Table - Decline Details
         st.markdown("### 📋 Detailed Declines")
