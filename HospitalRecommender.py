@@ -101,19 +101,14 @@ tabs = st.tabs([
 # Tab 0: National Trends
 with tabs[0]:
     st.subheader("📈 National Top-box % by Year and Measure")
-
-    # Calculate average Top-box % by year and measure
-    measure_year_trend = national_results_df.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
-
-    # Plot the trends
+    trend_data = national_results_df.groupby(['Measure', 'Year'])['Top-box Percentage'].mean().reset_index()
     fig, ax = plt.subplots(figsize=(12, 6))
-    sns.lineplot(data=measure_year_trend, x='Year', y='Top-box Percentage', hue='Measure', ax=ax)
+    sns.lineplot(data=trend_data, x='Year', y='Top-box Percentage', hue='Measure', ax=ax)
     ax.set_title("National Trends by Measure")
     ax.legend(title='Measure', bbox_to_anchor=(1.05, 1))
-    ax.grid(True)
     st.pyplot(fig)
-    # Optional AI Summary
-    st.markdown("### \ud83e\udd16 AI Summary (Beta)")
+
+    st.markdown("### 🤖 AI Summary (Beta)")
     if st.checkbox("Generate AI Summary of National Trends"):
         trend_stats = (
             trend_data.groupby("Measure")['Top-box Percentage']
@@ -133,7 +128,7 @@ with tabs[0]:
         """
 
         try:
-            with st.spinner("\ud83d\udd0e Analyzing trends with GPT-4..."):
+            with st.spinner("🔎 Analyzing trends with GPT-4..."):
                 response = openai.chat.completions.create(
                     model="gpt-4",
                     messages=[
@@ -144,10 +139,10 @@ with tabs[0]:
                     max_tokens=300
                 )
                 summary = response.choices[0].message.content
-                st.markdown("### \ud83d\udcc4 Executive Summary")
+                st.markdown("### 📄 Executive Summary")
                 st.write(summary)
         except Exception as e:
-            st.error(f"\u26a0\ufe0f Error generating AI summary: {e}")
+            st.error(f"⚠️ Error generating AI summary: {e}")
 
 # Tab 1: Most Improved Areas with Composite Score and Bottom-box Trends
 with tabs[1]:
