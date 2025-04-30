@@ -325,7 +325,7 @@ with tabs[3]:
     
         try:
             with st.spinner("Generating AI summary of regional differences..."):
-                response = openai.ChatCompletion.create(
+                response = openai.chat.completions.create(
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a healthcare data insights consultant."},
