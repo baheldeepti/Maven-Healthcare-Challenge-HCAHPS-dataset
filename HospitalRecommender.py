@@ -56,7 +56,7 @@ national_results_df = pd.merge(national_results_df, merged_measures_questions[['
 
 # Ensure 'State Name' exists by merging correctly
 if 'State' in responses_df.columns and 'State' in states_df.columns:
-    print
+    
     responses_df = pd.merge(responses_df, states_df[['State', 'State Name', 'Region']], on='State', how='left')
 
 if 'State' in state_results_df.columns and 'State' in states_df.columns:
